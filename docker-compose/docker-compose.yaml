@@ -1,0 +1,77 @@
+services:
+
+  nodeapp:
+    build: 
+      context: ./node
+      dockerfile: Dockerfile
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      - MY_VAR=123456
+    env_file:
+      - ./node/.env
+    volumes:
+      - ./node:/app
+    networks:
+      - backend
+      - db-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  
+  nodeapp-watch:
+    build: 
+      context: ./node
+      dockerfile: Dockerfile
+    depends_on:
+      mongo:
+        condition: service_healthy
+    develop:
+      watch:
+        - path: ./node
+          target: /app
+          action: sync
+          ignore:
+            - "./node/node_modules"
+        
+        - path: ./node/package.json
+          action: rebuild
+
+        - path: ./node/index.js
+          target: /app/index.js
+          action: sync+restart
+    
+    networks:
+      - backend
+      - db-net
+
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx-html:/usr/share/nginx/html
+    networks:
+      - frontend
+
+  mongo:
+    image: mongo:latest
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - db-net
+
+volumes:
+  mongo_data:      
+
+networks:
+  db-net:
+  backend:
+  frontend:

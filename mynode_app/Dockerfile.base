@@ -1,0 +1,10 @@
+ARG NODE_VERSION=21.1.0
+FROM node:${NODE_VERSION}
+WORKDIR /app
+
+
+ONBUILD COPY package*.json ./
+ONBUILD RUN npm install
+ONBUILD COPY . .
+
+CMD ["node", "index.js"]
